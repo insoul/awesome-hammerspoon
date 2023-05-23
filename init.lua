@@ -55,30 +55,32 @@ for _, v in pairs(hspoon_list) do
     hs.loadSpoon(v)
 end
 
-frames_for_screens = frames_for_screens or {{}, {}, {}}
-print(hs.inspect.inspect(frames_for_screens[0]))
+frames_funcs = frames_funcs or {{}, {}, {}}
+print("frames_funcs / " .. hs.inspect.inspect(frames_funcs))
 
 -- Functions to move a window to a desired location
 function resetFrames()
     local screens = hs.screen.allScreens()
     local screenCount = #screens
+    print("screenCount / " .. screenCount)
     local windows = hs.window.allWindows()
-    local frames = frames_for_screens[screenCount]
-    print(hs.inspect.inspect(frames))
-    if frames == nil then
+    local frames_func = frames_funcs[screenCount]
+    print("frames_func / " .. hs.inspect.inspect(frames_func))
+    if frames_func == nil then
         return
     end
+    frames = frames_func(screens)
 
     for _, window in ipairs(windows) do
         local title = window:title()
         local appName = window:application():name()
-        print(appName .. " / " .. title)
+        print("app: " .. appName .. " / title: " .. title)
 
         -- View and move locations based on application name
         local frame = frames[title] or frames[appName]
 
         if frame ~= nil then
-            print(hs.inspect.inspect(frame))
+            print("frame / " .. hs.inspect.inspect(frame))
             window:setFrame(frame)
         end
     end
@@ -89,8 +91,16 @@ hs.hotkey.bind(reset_frames_keys[1], reset_frames_keys[2], resetFrames)
 
 -- Functions to detect external monitor connection events
 function handleScreenEvent(event)
+    print(hs.inspect.inspect(event))
     resetFrames()
 end
+hs.screen.watcher.new(handleScreenEvent):start()
+
+function handleSystemWake(eventType)
+    print(hs.inspect.inspect(eventType))
+    resetFrames()
+end
+hs.caffeinate.watcher.new(handleSystemWake):start()
 
 ----------------------------------------------------------------------------------------------------
 -- Then we create/register all kinds of modal keybindings environments.
