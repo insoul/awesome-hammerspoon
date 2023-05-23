@@ -63,26 +63,38 @@ function resetFrames()
     local screens = hs.screen.allScreens()
     local screenCount = #screens
     print("screenCount / " .. screenCount)
-    local windows = hs.window.allWindows()
     local frames_func = frames_funcs[screenCount]
     print("frames_func / " .. hs.inspect.inspect(frames_func))
     if frames_func == nil then
         return
     end
-    frames = frames_func(screens)
+    local frames = frames_func(screens)
 
+    local windows = hs.window.allWindows()
     for _, window in ipairs(windows) do
-        local title = window:title()
-        local appName = window:application():name()
-        print("app: " .. appName .. " / title: " .. title)
+        resetFrame(window, frames)
+    end
+end
 
-        -- View and move locations based on application name
-        local frame = frames[title] or frames[appName]
+function resetFrame(window, frames)
+    if frames == nil then
+        local screens = hs.screen.allScreens()
+        local screenCount = #screens
+        print("screenCount / " .. screenCount)
+        local frames_func = frames_funcs[screenCount]
+        print("frames_func / " .. hs.inspect.inspect(frames_func))
+        frames = frames_func(screens)
+    end
+    local title = window:title()
+    local appName = window:application():name()
+    print("app: " .. appName .. " / title: " .. title)
 
-        if frame ~= nil then
-            print("frame / " .. hs.inspect.inspect(frame))
-            window:setFrame(frame)
-        end
+    -- View and move locations based on application name
+    local frame = frames[title] or frames[appName]
+
+    if frame ~= nil then
+        print("frame / " .. hs.inspect.inspect(frame))
+        window:setFrame(frame)
     end
 end
 
@@ -91,27 +103,60 @@ hs.hotkey.bind(reset_frames_keys[1], reset_frames_keys[2], resetFrames)
 
 -- Functions to detect external monitor connection events
 function handleScreenEvent(event)
-    print(hs.inspect.inspect(event))
+    print("screen event / " .. hs.inspect.inspect(event))
     resetFrames()
 end
 hs.screen.watcher.new(handleScreenEvent):start()
 
 function handleSystemWake(eventType)
-    print(hs.inspect.inspect(eventType))
+    print("system wake event / " .. hs.inspect.inspect(eventType))
     resetFrames()
 end
 hs.caffeinate.watcher.new(handleSystemWake):start()
+
+function moveWindowToMonitor(monitorNumber)
+    local window = hs.window.focusedWindow()
+    local screens = hs.screen.allScreens()
+    local targetScreen = screens[monitorNumber]
+
+    if targetScreen then
+        local frame = window:frame()
+        local screenFrame = window:screen():frame()
+        local targetScreenFrame = targetScreen:frame()
+
+        frame.x = targetScreenFrame.x + ((frame.x - screenFrame.x) / screenFrame.w) * targetScreenFrame.w
+        frame.y = targetScreenFrame.y + ((frame.y - screenFrame.y) / screenFrame.h) * targetScreenFrame.h
+        frame.w = (frame.w / screenFrame.w) * targetScreenFrame.w
+        frame.h = (frame.h / screenFrame.h) * targetScreenFrame.h
+
+        window:moveToScreen(targetScreen)
+        window:setFrame(frame)
+    end
+    resetFrame(window)
+end
+
+hs.hotkey.bind({"ctrl", "option"}, "1", function()
+    moveWindowToMonitor(1)
+end)
+hs.hotkey.bind({"ctrl", "option"}, "2", function()
+    moveWindowToMonitor(2)
+end)
+hs.hotkey.bind({"ctrl", "option"}, "3", function()
+    moveWindowToMonitor(3)
+end)
 
 ----------------------------------------------------------------------------------------------------
 -- Then we create/register all kinds of modal keybindings environments.
 ----------------------------------------------------------------------------------------------------
 -- Register windowHints (Register a keybinding which is NOT modal environment with modal supervisor)
-hswhints_keys = hswhints_keys or {"alt", "tab"}
-if string.len(hswhints_keys[2]) > 0 then
-    spoon.ModalMgr.supervisor:bind(hswhints_keys[1], hswhints_keys[2], 'Show Window Hints', function()
-        spoon.ModalMgr:deactivateAll()
-        hs.hints.windowHints()
-    end)
+-- hswhints_keys = hswhints_keys or {"alt", "tab"}
+if hswhints_keys ~= nil then
+    if string.len(hswhints_keys[2]) > 0 then
+        spoon.ModalMgr.supervisor:bind(hswhints_keys[1], hswhints_keys[2], 'Show Window Hints', function()
+            spoon.ModalMgr:deactivateAll()
+            hs.hints.windowHints()
+        end)
+    end
 end
 
 ----------------------------------------------------------------------------------------------------
