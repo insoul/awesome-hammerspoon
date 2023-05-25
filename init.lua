@@ -63,36 +63,50 @@ function resetFrames()
     local screens = hs.screen.allScreens()
     local screenCount = #screens
     print("screenCount / " .. screenCount)
-    local frames_func = frames_funcs[screenCount]
-    print("frames_func / " .. hs.inspect.inspect(frames_func))
-    if frames_func == nil then
-        return
+    local windowScreenNumbers = windows_screen_numbers[screenCount]
+    print("apps_screen_number / " .. hs.inspect.inspect(windowScreenNumbers))
+    if windowScreenNumbers == nil then
+        return nil
     end
-    local frames = frames_func(screens)
 
     local windows = hs.window.allWindows()
     for _, window in ipairs(windows) do
-        resetFrame(window, frames)
+        local title = window:title()
+        local appName = window:application():name()
+        local screenNumber = windowScreenNumbers[title] or windowScreenNumbers[appName]
+        if screenNumber == nil then
+            return nil
+        end
+        resetFrame(window, screenNumber)
     end
 end
 
-function resetFrame(window, frames)
-    if frames == nil then
-        local screens = hs.screen.allScreens()
-        local screenCount = #screens
-        print("screenCount / " .. screenCount)
-        local frames_func = frames_funcs[screenCount]
-        print("frames_func / " .. hs.inspect.inspect(frames_func))
-        frames = frames_func(screens)
-    end
+function resetFrame(window, screenNumber)
     local title = window:title()
     local appName = window:application():name()
     print("app: " .. appName .. " / title: " .. title)
-
     -- View and move locations based on application name
-    local frame = frames[title] or frames[appName]
+    local frameFuncs = frames_funcs[title] or frames_funcs[appName]
+    print("frameFuncs / " .. hs.inspect.inspect(frameFuncs))
+    if frameFuncs == nil then
+        return nil
+    end
 
-    if frame ~= nil then
+    local frameFunc = frameFuncs[screenNumber]
+    print("frameFunc / " .. hs.inspect.inspect(frameFunc))
+    if frameFunc == nil then
+        return nil
+    end
+    
+    if frameFunc == "full_frame" then
+        window:setFrame(window:screen():frame())
+    else
+        local screens = hs.screen.allScreens()
+        local screen = screens[screenNumber]
+        if screen == nil then
+            return nil
+        end
+        local frame = frameFunc(screen)
         print("frame / " .. hs.inspect.inspect(frame))
         window:setFrame(frame)
     end
@@ -108,16 +122,12 @@ function handleScreenEvent(event)
 end
 hs.screen.watcher.new(handleScreenEvent):start()
 
-function handleSystemWake(eventType)
-    print("system wake event / " .. hs.inspect.inspect(eventType))
-    resetFrames()
-end
-hs.caffeinate.watcher.new(handleSystemWake):start()
+resetFrames()
 
-function moveWindowToMonitor(monitorNumber)
+function moveWindowToScreen(screenNumber)
     local window = hs.window.focusedWindow()
     local screens = hs.screen.allScreens()
-    local targetScreen = screens[monitorNumber]
+    local targetScreen = screens[screenNumber]
 
     if targetScreen then
         local frame = window:frame()
@@ -130,19 +140,18 @@ function moveWindowToMonitor(monitorNumber)
         frame.h = (frame.h / screenFrame.h) * targetScreenFrame.h
 
         window:moveToScreen(targetScreen)
-        window:setFrame(frame)
+        resetFrame(window, screenNumber)
     end
-    resetFrame(window)
 end
 
 hs.hotkey.bind({"ctrl", "option"}, "1", function()
-    moveWindowToMonitor(1)
+    moveWindowToScreen(1)
 end)
 hs.hotkey.bind({"ctrl", "option"}, "2", function()
-    moveWindowToMonitor(2)
+    moveWindowToScreen(2)
 end)
 hs.hotkey.bind({"ctrl", "option"}, "3", function()
-    moveWindowToMonitor(3)
+    moveWindowToScreen(3)
 end)
 
 ----------------------------------------------------------------------------------------------------
