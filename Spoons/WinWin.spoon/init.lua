@@ -160,6 +160,10 @@ function obj:moveAndResize(option)
             cwin:setFrame({x=wf.x-stepw, y=wf.y-steph, w=wf.w+(stepw*2), h=wf.h+(steph*2)})
         elseif option == "shrink" then
             cwin:setFrame({x=wf.x+stepw, y=wf.y+steph, w=wf.w-(stepw*2), h=wf.h-(steph*2)})
+        elseif option == "2/3:left" then
+            cwin:setFrame({x=cres.x, y=cres.y, w=cres.w * 2/3, h=cres.h})
+        elseif option == "4/5:right" then
+            cwin:setFrame({x=cres.x+cres.w * 1/5, y=cres.y, w=cres.w * 4/5, h=cres.h})
         end
     else
         hs.alert.show("No focused window!")

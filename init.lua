@@ -64,7 +64,7 @@ function resetFrames()
     local screenCount = #screens
     print("screenCount / " .. screenCount)
     local windowScreenNumbers = windows_screen_numbers[screenCount]
-    print("apps_screen_number / " .. hs.inspect.inspect(windowScreenNumbers))
+    print("window_screen_number / " .. hs.inspect.inspect(windowScreenNumbers))
     if windowScreenNumbers == nil then
         return nil
     end
@@ -74,14 +74,14 @@ function resetFrames()
         local title = window:title()
         local appName = window:application():name()
         local screenNumber = windowScreenNumbers[title] or windowScreenNumbers[appName]
-        if screenNumber == nil then
-            return nil
-        end
         resetFrame(window, screenNumber)
     end
 end
 
 function resetFrame(window, screenNumber)
+    if screenNumber == nil then
+        return nil
+    end
     local title = window:title()
     local appName = window:application():name()
     print("app: " .. appName .. " / title: " .. title)
@@ -123,36 +123,6 @@ end
 hs.screen.watcher.new(handleScreenEvent):start()
 
 resetFrames()
-
-function moveWindowToScreen(screenNumber)
-    local window = hs.window.focusedWindow()
-    local screens = hs.screen.allScreens()
-    local targetScreen = screens[screenNumber]
-
-    if targetScreen then
-        local frame = window:frame()
-        local screenFrame = window:screen():frame()
-        local targetScreenFrame = targetScreen:frame()
-
-        frame.x = targetScreenFrame.x + ((frame.x - screenFrame.x) / screenFrame.w) * targetScreenFrame.w
-        frame.y = targetScreenFrame.y + ((frame.y - screenFrame.y) / screenFrame.h) * targetScreenFrame.h
-        frame.w = (frame.w / screenFrame.w) * targetScreenFrame.w
-        frame.h = (frame.h / screenFrame.h) * targetScreenFrame.h
-
-        window:moveToScreen(targetScreen)
-        resetFrame(window, screenNumber)
-    end
-end
-
-hs.hotkey.bind({"ctrl", "option"}, "1", function()
-    moveWindowToScreen(1)
-end)
-hs.hotkey.bind({"ctrl", "option"}, "2", function()
-    moveWindowToScreen(2)
-end)
-hs.hotkey.bind({"ctrl", "option"}, "3", function()
-    moveWindowToScreen(3)
-end)
 
 ----------------------------------------------------------------------------------------------------
 -- Then we create/register all kinds of modal keybindings environments.
@@ -202,13 +172,14 @@ for _, v in ipairs(hsapp_list) do
 end
 
 -- Then we register some keybindings with modal supervisor
-hsappM_keys = hsappM_keys or {"alt", "A"}
-if string.len(hsappM_keys[2]) > 0 then
-    spoon.ModalMgr.supervisor:bind(hsappM_keys[1], hsappM_keys[2], "Enter AppM Environment", function()
-        spoon.ModalMgr:deactivateAll()
-        -- Show the keybindings cheatsheet once appM is activated
-        spoon.ModalMgr:activate({"appM"}, "#FFBD2E", true)
-    end)
+if hsappM_keys ~= nil then
+    if string.len(hsappM_keys[2]) > 0 then
+        spoon.ModalMgr.supervisor:bind(hsappM_keys[1], hsappM_keys[2], "Enter AppM Environment", function()
+            spoon.ModalMgr:deactivateAll()
+            -- Show the keybindings cheatsheet once appM is activated
+            spoon.ModalMgr:activate({"appM"}, "#FFBD2E", true)
+        end)
+    end
 end
 
 ----------------------------------------------------------------------------------------------------
@@ -306,13 +277,14 @@ end
 
 ----------------------------------------------------------------------------------------------------
 -- Register Hammerspoon API manual: Open Hammerspoon manual in default browser
-hsman_keys = hsman_keys or {"alt", "H"}
-if string.len(hsman_keys[2]) > 0 then
-    spoon.ModalMgr.supervisor:bind(hsman_keys[1], hsman_keys[2], "Read Hammerspoon Manual", function()
-        hs.doc.hsdocs.forceExternalBrowser(true)
-        hs.doc.hsdocs.moduleEntitiesInSidebar(true)
-        hs.doc.hsdocs.help()
-    end)
+if hsman_keys ~= nil then
+    if string.len(hsman_keys[2]) > 0 then
+        spoon.ModalMgr.supervisor:bind(hsman_keys[1], hsman_keys[2], "Read Hammerspoon Manual", function()
+            hs.doc.hsdocs.forceExternalBrowser(true)
+            hs.doc.hsdocs.moduleEntitiesInSidebar(true)
+            hs.doc.hsdocs.help()
+        end)
+    end
 end
 
 ----------------------------------------------------------------------------------------------------
@@ -355,11 +327,12 @@ end
 
 ----------------------------------------------------------------------------------------------------
 -- Register lock screen
-hslock_keys = hslock_keys or {"alt", "L"}
-if string.len(hslock_keys[2]) > 0 then
-    spoon.ModalMgr.supervisor:bind(hslock_keys[1], hslock_keys[2], "Lock Screen", function()
-        hs.caffeinate.lockScreen()
-    end)
+if hslock_keys ~= nil then
+    if string.len(hslock_keys[2]) > 0 then
+        spoon.ModalMgr.supervisor:bind(hslock_keys[1], hslock_keys[2], "Lock Screen", function()
+            hs.caffeinate.lockScreen()
+        end)
+    end
 end
 
 ----------------------------------------------------------------------------------------------------
@@ -383,7 +356,6 @@ if spoon.WinWin then
     cmodal:bind('', 'U', 'SouthWest Corner', function() spoon.WinWin:stash() spoon.WinWin:moveAndResize("cornerSW") end)
     cmodal:bind('', 'I', 'SouthEast Corner', function() spoon.WinWin:stash() spoon.WinWin:moveAndResize("cornerSE") end)
     cmodal:bind('', 'F', 'Fullscreen', function() spoon.WinWin:stash() spoon.WinWin:moveAndResize("fullscreen") end)
-    cmodal:bind('', 'C', 'Center Window', function() spoon.WinWin:stash() spoon.WinWin:moveAndResize("center") end)
     cmodal:bind('', '=', 'Stretch Outward', function() spoon.WinWin:moveAndResize("expand") end, nil, function() spoon.WinWin:moveAndResize("expand") end)
     cmodal:bind('', '-', 'Shrink Inward', function() spoon.WinWin:moveAndResize("shrink") end, nil, function() spoon.WinWin:moveAndResize("shrink") end)
     cmodal:bind('shift', 'H', 'Move Leftward', function() spoon.WinWin:stepResize("left") end, nil, function() spoon.WinWin:stepResize("left") end)
@@ -398,6 +370,10 @@ if spoon.WinWin then
     cmodal:bind('', '[', 'Undo Window Manipulation', function() spoon.WinWin:undo() end)
     cmodal:bind('', ']', 'Redo Window Manipulation', function() spoon.WinWin:redo() end)
     cmodal:bind('', '`', 'Center Cursor', function() spoon.WinWin:centerCursor() end)
+    cmodal:bind('', 'Z', '2/3:left', function() spoon.WinWin:stash() spoon.WinWin:moveAndResize("2/3:left") end)
+    cmodal:bind('', 'X', '4/5:right', function() spoon.WinWin:stash() spoon.WinWin:moveAndResize("4/5:right") end)
+    cmodal:bind('', ',', '2/3:left', function() spoon.WinWin:stash() spoon.WinWin:moveAndResize("2/3:left") end)
+    cmodal:bind('', '.', '4/5:right', function() spoon.WinWin:stash() spoon.WinWin:moveAndResize("4/5:right") end)
 
     -- Register resizeM with modal supervisor
     hsresizeM_keys = hsresizeM_keys or {"alt", "R"}
@@ -406,7 +382,7 @@ if spoon.WinWin then
             -- Deactivate some modal environments or not before activating a new one
             spoon.ModalMgr:deactivateAll()
             -- Show an status indicator so we know we're in some modal environment now
-            spoon.ModalMgr:activate({"resizeM"}, "#B22222")
+            spoon.ModalMgr:activate({"resizeM"}, "#B22222", true)
         end)
     end
 end
@@ -448,18 +424,20 @@ end
 ----------------------------------------------------------------------------------------------------
 -- Register browser tab typist: Type URL of current tab of running browser in markdown format. i.e. [title](link)
 hstype_keys = hstype_keys or {"alt", "V"}
-if string.len(hstype_keys[2]) > 0 then
-    spoon.ModalMgr.supervisor:bind(hstype_keys[1], hstype_keys[2], "Type Browser Link", function()
-        local safari_running = hs.application.applicationsForBundleID("com.apple.Safari")
-        local chrome_running = hs.application.applicationsForBundleID("com.google.Chrome")
-        if #safari_running > 0 then
-            local stat, data = hs.applescript('tell application "Safari" to get {URL, name} of current tab of window 1')
-            if stat then hs.eventtap.keyStrokes("[" .. data[2] .. "](" .. data[1] .. ")") end
-        elseif #chrome_running > 0 then
-            local stat, data = hs.applescript('tell application "Google Chrome" to get {URL, title} of active tab of window 1')
-            if stat then hs.eventtap.keyStrokes("[" .. data[2] .. "](" .. data[1] .. ")") end
-        end
-    end)
+if hstype_keys ~= nil then
+    if string.len(hstype_keys[2]) > 0 then
+        spoon.ModalMgr.supervisor:bind(hstype_keys[1], hstype_keys[2], "Type Browser Link", function()
+            local safari_running = hs.application.applicationsForBundleID("com.apple.Safari")
+            local chrome_running = hs.application.applicationsForBundleID("com.google.Chrome")
+            if #safari_running > 0 then
+                local stat, data = hs.applescript('tell application "Safari" to get {URL, name} of current tab of window 1')
+                if stat then hs.eventtap.keyStrokes("[" .. data[2] .. "](" .. data[1] .. ")") end
+            elseif #chrome_running > 0 then
+                local stat, data = hs.applescript('tell application "Google Chrome" to get {URL, title} of active tab of window 1')
+                if stat then hs.eventtap.keyStrokes("[" .. data[2] .. "](" .. data[1] .. ")") end
+            end
+        end)
+    end
 end
 
 ----------------------------------------------------------------------------------------------------
@@ -472,3 +450,5 @@ end
 ----------------------------------------------------------------------------------------------------
 -- Finally we initialize ModalMgr supervisor
 spoon.ModalMgr.supervisor:enter()
+
+hs.caffeinate.watcher.new(resetFrames):start()
